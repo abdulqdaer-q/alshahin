@@ -72,6 +72,9 @@ electron-menubar-app/
 | `npm run watch` | Watch mode for TypeScript compilation |
 | `npm start` | Run the app (requires prior build) |
 | `npm run clean` | Remove compiled files |
+| `npm test` | Run tests with Jest |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage report |
 
 ## Development Workflow
 
@@ -146,6 +149,92 @@ ipcMain.on('toMain', (event, data) => {
   console.log('Received:', data);
 });
 ```
+
+## Testing
+
+This project includes a comprehensive testing setup using Jest and TypeScript.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (auto-rerun on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Structure
+
+```
+tests/
+├── __mocks__/
+│   └── electron.ts       # Mock Electron APIs for testing
+├── main/
+│   ├── main.test.ts      # Main process tests
+│   └── preload.test.ts   # Preload script tests
+├── renderer/
+│   └── renderer.test.ts  # Renderer process tests
+└── setup.ts              # Test environment setup
+```
+
+### Writing Tests
+
+Tests are written in TypeScript using Jest. Example:
+
+```typescript
+describe('Feature Name', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should do something', () => {
+    // Arrange
+    const input = 'test';
+
+    // Act
+    const result = someFunction(input);
+
+    // Assert
+    expect(result).toBe('expected');
+  });
+});
+```
+
+### Testing Best Practices
+
+1. **Unit Tests**: Test individual functions and components in isolation
+2. **Mocking**: Use the provided Electron mocks in `tests/__mocks__/electron.ts`
+3. **Coverage**: Aim for >80% code coverage for critical paths
+4. **Isolation**: Each test should be independent and not rely on other tests
+5. **Descriptive Names**: Use clear test descriptions that explain what is being tested
+
+### Test Configuration
+
+Tests are configured via `jest.config.js`:
+
+- **Preset**: `ts-jest` for TypeScript support
+- **Environment**: Node.js environment for Electron main process
+- **Coverage**: Excludes type definitions and renderer-specific code
+- **Mocks**: Electron APIs are automatically mocked
+
+### Coverage Reports
+
+After running `npm run test:coverage`, view the coverage report:
+
+```bash
+# Open HTML coverage report in browser
+open coverage/lcov-report/index.html
+```
+
+Coverage reports show:
+- **Statements**: Percentage of statements executed
+- **Branches**: Percentage of conditional branches tested
+- **Functions**: Percentage of functions called
+- **Lines**: Percentage of lines executed
 
 ## Security
 
