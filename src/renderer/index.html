@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Electron Menubar App</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Electron Menubar</h1>
+      <p class="subtitle">A minimal TypeScript menubar app</p>
+    </header>
+
+    <main>
+      <div class="card">
+        <h2>Welcome</h2>
+        <p>This is a minimal Electron menubar application built with TypeScript.</p>
+      </div>
+
+      <div class="card">
+        <h3>Features</h3>
+        <ul>
+          <li>macOS menu bar integration</li>
+          <li>Frameless popover window</li>
+          <li>TypeScript support</li>
+          <li>Context isolation enabled</li>
+          <li>Resizable window</li>
+        </ul>
+      </div>
+
+      <div class="card info">
+        <p><strong>Platform:</strong> <span id="platform">Loading...</span></p>
+        <p><strong>Electron:</strong> <span id="electron-version">Loading...</span></p>
+        <p><strong>Node:</strong> <span id="node-version">Loading...</span></p>
+        <p><strong>Chrome:</strong> <span id="chrome-version">Loading...</span></p>
+      </div>
+    </main>
+
+    <footer>
+      <p class="hint">Click outside to hide this window</p>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
