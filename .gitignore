@@ -112,6 +112,10 @@ dist
 # Electron
 out/
 build/
+# Allow build config files for electron-builder
+!build/entitlements.mac.plist
+!build/notarize.js
+!tests/build/
 release/
 *.dmg
 *.exe

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Enable hardened runtime -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Allow unsigned executable memory (required for Electron) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Disable library validation (required for Electron) -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- Allow DYLD environment variables (for development) -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+
+    <!-- Disable executable page protection (required for V8) -->
+    <key>com.apple.security.cs.disable-executable-page-protection</key>
+    <true/>
+
+    <!-- Network access (required for web content) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- Network server (if your app acts as a server) -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+
+    <!-- Audio input (if your app uses microphone) -->
+    <!-- <key>com.apple.security.device.audio-input</key>
+    <true/> -->
+
+    <!-- Camera access (if your app uses camera) -->
+    <!-- <key>com.apple.security.device.camera</key>
+    <true/> -->
+
+    <!-- Location services (if your app uses location) -->
+    <!-- <key>com.apple.security.personal-information.location</key>
+    <true/> -->
+
+    <!-- Address book (if your app uses contacts) -->
+    <!-- <key>com.apple.security.personal-information.addressbook</key>
+    <true/> -->
+
+    <!-- Calendar (if your app uses calendar) -->
+    <!-- <key>com.apple.security.personal-information.calendars</key>
+    <true/> -->
+
+    <!-- Photos library (if your app uses photos) -->
+    <!-- <key>com.apple.security.personal-information.photos-library</key>
+    <true/> -->
+
+    <!-- Apple Events (for scripting/automation) -->
+    <!-- <key>com.apple.security.automation.apple-events</key>
+    <true/> -->
+
+    <!-- File access (user selected files) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- File access (downloads folder) -->
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+
+    <!-- Printing -->
+    <!-- <key>com.apple.security.print</key>
+    <true/> -->
+</dict>
+</plist>
