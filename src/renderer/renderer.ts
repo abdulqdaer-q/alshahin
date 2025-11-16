@@ -5,8 +5,9 @@
  * with the main process via the electronAPI bridge.
  */
 
-// Type import (the actual API is available via window.electronAPI from preload)
+// Type imports (the actual API is available via window.electronAPI from preload)
 import type { Site, UserAgentMode, NavigationState } from '../common/types';
+import type { ElectronAPI } from '../main/preload';
 
 // Debug: Verify renderer is loading and electronAPI is available
 console.log('Renderer script loaded');
@@ -14,6 +15,11 @@ console.log('electronAPI available:', typeof window.electronAPI !== 'undefined')
 if (typeof window.electronAPI === 'undefined') {
   console.error('ERROR: window.electronAPI is not defined! Preload script may have failed.');
 }
+
+// Type assertion for window.electronAPI to help TypeScript
+declare const window: Window & {
+  electronAPI: ElectronAPI;
+};
 
 // State
 let sites: Site[] = [];
