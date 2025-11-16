@@ -21,7 +21,8 @@ let currentBrowserView: BrowserView | null = null;
 let currentSiteId: string | null = null;
 
 // Window dimensions for the UI chrome (toolbar, tabs, etc.)
-const UI_CHROME_HEIGHT = 120; // Height reserved for UI controls
+// Increased to ensure BrowserView doesn't overlap with UI
+const UI_CHROME_HEIGHT = 150; // Height reserved for UI controls (header + tabs + padding)
 
 /**
  * Create the main menubar window
@@ -38,27 +39,93 @@ function createWindow(): void {
     transparent: false,
     alwaysOnTop: settings.popoverAlwaysOnTop || false,
     backgroundColor: '#f5f5f5',
+    skipTaskbar: false, // Allow window to receive focus even as menubar app
+    acceptFirstMouse: true, // Accept clicks even when window is not focused
+    hasShadow: true,
+    vibrancy: undefined, // Disable vibrancy to ensure proper rendering
+    visualEffectState: 'active', // Keep window active
+    titleBarStyle: 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false, // CRITICAL: Disable sandbox to allow proper input handling
+      devTools: true,
     },
   });
 
-  window.loadFile(path.join(__dirname, '../renderer/index.html'));
+  const htmlPath = path.join(__dirname, '../renderer/index.html');
+  console.log('Loading HTML from:', htmlPath);
 
-  // Hide window when it loses focus (menubar behavior)
-  window.on('blur', () => {
-    if (window && !window.webContents.isDevToolsOpened()) {
-      window.hide();
+  // Forward renderer console messages to main process console
+  window.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[RENDERER] ${message}`);
+  });
+
+  // Log any errors from renderer
+  window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load renderer:', errorCode, errorDescription);
+  });
+
+  window.loadFile(htmlPath);
+
+  // Ensure window is ready before showing
+  window.webContents.on('did-finish-load', () => {
+    // Window content is now fully loaded
+    console.log('Main window content loaded');
+    console.log('Window bounds:', window?.getBounds());
+
+    // Execute test JavaScript to verify renderer is working
+    if (window) {
+      window.webContents.executeJavaScript('console.log("TEST: JavaScript execution works!"); "OK"')
+        .then(result => console.log('JavaScript test result:', result))
+        .catch(err => console.error('JavaScript test failed:', err));
     }
   });
 
-  // Save window dimensions on resize
+  // Hide window when it loses focus (menubar behavior)
+  // Use a timeout to prevent hiding when clicking inside the window
+  let blurTimeout: NodeJS.Timeout | null = null;
+  window.on('blur', () => {
+    if (!window) return;
+
+    // Clear any existing timeout
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+    }
+
+    // Wait a bit before hiding - this allows clicks to be processed first
+    blurTimeout = setTimeout(() => {
+      if (window && !window.webContents.isDevToolsOpened() && !window.isFocused()) {
+        window.hide();
+      }
+      blurTimeout = null;
+    }, 200);
+  });
+
+  // If window regains focus, cancel the hide timeout
+  window.on('focus', () => {
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+      blurTimeout = null;
+    }
+  });
+
+  // Save window dimensions on resize and update BrowserView bounds
   window.on('resize', () => {
     if (window) {
       const [width, height] = window.getSize();
       settingsStore.update({ windowWidth: width, windowHeight: height });
+
+      // Update BrowserView bounds to prevent it from covering UI
+      if (currentBrowserView) {
+        currentBrowserView.setBounds({
+          x: 0,
+          y: UI_CHROME_HEIGHT,
+          width: width,
+          height: height - UI_CHROME_HEIGHT,
+        });
+      }
     }
   });
 
@@ -134,7 +201,23 @@ function showWindow(): void {
 
   window.setPosition(x, y, false);
   window.show();
+
+  // Force the window to activate and accept input on macOS
+  if (process.platform === 'darwin') {
+    app.focus({ steal: true });
+  }
+
   window.focus();
+  window.moveTop();
+
+  // Ensure window is ready to receive input
+  console.log('Window shown at position:', { x, y });
+
+  // Check focus after a brief delay to see if it worked
+  setTimeout(() => {
+    console.log('Window is focused:', window?.isFocused());
+    console.log('Window is visible:', window?.isVisible());
+  }, 50);
 }
 
 /**
@@ -156,7 +239,15 @@ function createBrowserView(site: Site): BrowserView {
       sandbox: true, // Enhanced security
       webSecurity: true,
       session: siteSession, // Use isolated session for cookie isolation
+      backgroundThrottling: false, // Prevent throttling when window is in background
     },
+  });
+
+  console.log('Creating BrowserView with bounds:', {
+    x: 0,
+    y: UI_CHROME_HEIGHT,
+    width: window.getSize()[0],
+    height: window.getSize()[1] - UI_CHROME_HEIGHT,
   });
 
   // Set custom user agent
@@ -171,9 +262,12 @@ function createBrowserView(site: Site): BrowserView {
     height: height - UI_CHROME_HEIGHT,
   });
 
+  // Important: Auto-resize both width and height proportionally
   browserView.setAutoResize({
     width: true,
     height: true,
+    horizontal: false,
+    vertical: false,
   });
 
   // Load the site URL
@@ -234,7 +328,36 @@ function switchToSite(siteId: string): void {
 
   // Create new view
   currentBrowserView = createBrowserView(site);
+
+  // Add BrowserView to window
   window.addBrowserView(currentBrowserView);
+
+  // Ensure proper positioning after adding the view
+  const [width, height] = window.getSize();
+  const bounds = {
+    x: 0,
+    y: UI_CHROME_HEIGHT,
+    width: width,
+    height: height - UI_CHROME_HEIGHT,
+  };
+
+  console.log('Setting BrowserView bounds after adding to window:', bounds);
+  currentBrowserView.setBounds(bounds);
+
+  // Verify bounds were set correctly - force it again to be sure
+  setTimeout(() => {
+    if (currentBrowserView && window) {
+      const verifyBounds = {
+        x: 0,
+        y: UI_CHROME_HEIGHT,
+        width: window.getSize()[0],
+        height: window.getSize()[1] - UI_CHROME_HEIGHT,
+      };
+      console.log('Verifying BrowserView bounds:', verifyBounds);
+      currentBrowserView.setBounds(verifyBounds);
+    }
+  }, 100);
+
   currentSiteId = siteId;
 
   // Update settings
@@ -637,7 +760,7 @@ function registerKeyboardShortcuts(): void {
   });
 
   // Open DevTools for current BrowserView
-  globalShortcut.register('CommandOrControl+Alt+I', () => {
+  globalShortcut.register('CommandOrControl+I', () => {
     if (currentBrowserView) {
       currentBrowserView.webContents.openDevTools();
     }
@@ -646,7 +769,7 @@ function registerKeyboardShortcuts(): void {
   console.log('Keyboard shortcuts registered:');
   console.log('  - CommandOrControl+Shift+X: Toggle popover');
   console.log('  - CommandOrControl+Tab: Cycle sites');
-  console.log('  - CommandOrControl+Alt+I: Open DevTools');
+  console.log('  - CommandOrControl+I: Open DevTools');
 }
 
 /**
@@ -678,13 +801,17 @@ app.whenReady().then(() => {
     sessionManager.setAdBlockEnabled(true);
   }
 
-  // Load the last active site if available
+  // DON'T automatically load the last active site on startup
+  // This was causing the BrowserView to cover the UI controls
+  // Users can click on a site tab to load it instead
+  /*
   if (settings.activeSiteId) {
     const site = siteStore.getById(settings.activeSiteId);
     if (site) {
       switchToSite(settings.activeSiteId);
     }
   }
+  */
 
   // Restore pinned windows
   const sites = siteStore.getAll();

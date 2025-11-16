@@ -86,18 +86,20 @@ const settingsBtnImportExport = document.getElementById('settings-btn-import-exp
 // ============================================================================
 
 window.addEventListener('DOMContentLoaded', async () => {
-  console.log('Renderer process initialized');
+  try {
+    // Load initial data
+    await loadSites();
+    await loadSettings();
+    await loadStoragePath();
 
-  // Load initial data
-  await loadSites();
-  await loadSettings();
-  await loadStoragePath();
+    // Setup navigation listeners
+    window.electronAPI.navigation.onStateChange(handleNavigationStateChange);
 
-  // Setup navigation listeners
-  window.electronAPI.navigation.onStateChange(handleNavigationStateChange);
-
-  // Setup event listeners
-  setupEventListeners();
+    // Setup event listeners
+    setupEventListeners();
+  } catch (error) {
+    console.error('Error during initialization:', error);
+  }
 });
 
 /**
@@ -159,19 +161,47 @@ async function loadStoragePath(): Promise<void> {
 
 function setupEventListeners(): void {
   // Navigation controls
-  btnBack.addEventListener('click', () => window.electronAPI.navigation.back());
-  btnForward.addEventListener('click', () => window.electronAPI.navigation.forward());
-  btnReload.addEventListener('click', () => window.electronAPI.navigation.reload());
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      window.electronAPI.navigation.back();
+    });
+  }
+  if (btnForward) {
+    btnForward.addEventListener('click', () => {
+      window.electronAPI.navigation.forward();
+    });
+  }
+  if (btnReload) {
+    btnReload.addEventListener('click', () => {
+      window.electronAPI.navigation.reload();
+    });
+  }
 
   // User agent toggle
   btnUaDesktop.addEventListener('click', () => setUserAgentMode('desktop'));
   btnUaMobile.addEventListener('click', () => setUserAgentMode('mobile'));
 
   // Action buttons
-  btnAddSite.addEventListener('click', showAddSiteModal);
-  btnSettings.addEventListener('click', showSettingsModal);
-  btnAlwaysOnTop.addEventListener('click', togglePopoverAlwaysOnTop);
-  btnAdBlock.addEventListener('click', toggleAdBlock);
+  if (btnAddSite) {
+    btnAddSite.addEventListener('click', () => {
+      showAddSiteModal();
+    });
+  }
+  if (btnSettings) {
+    btnSettings.addEventListener('click', () => {
+      showSettingsModal();
+    });
+  }
+  if (btnAlwaysOnTop) {
+    btnAlwaysOnTop.addEventListener('click', () => {
+      togglePopoverAlwaysOnTop();
+    });
+  }
+  if (btnAdBlock) {
+    btnAdBlock.addEventListener('click', () => {
+      toggleAdBlock();
+    });
+  }
 
   // Site modal
   modalSiteClose.addEventListener('click', hideSiteModal);
