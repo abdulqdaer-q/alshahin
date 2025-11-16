@@ -8,6 +8,13 @@
 // Type import (the actual API is available via window.electronAPI from preload)
 import type { Site, UserAgentMode, NavigationState } from '../common/types';
 
+// Debug: Verify renderer is loading and electronAPI is available
+console.log('Renderer script loaded');
+console.log('electronAPI available:', typeof window.electronAPI !== 'undefined');
+if (typeof window.electronAPI === 'undefined') {
+  console.error('ERROR: window.electronAPI is not defined! Preload script may have failed.');
+}
+
 // State
 let sites: Site[] = [];
 let currentSiteId: string | null = null;
