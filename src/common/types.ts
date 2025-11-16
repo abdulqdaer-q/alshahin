@@ -1,0 +1,89 @@
+/**
+ * Common types shared between main and renderer processes
+ */
+
+/**
+ * Represents a single web app/site in the menubar
+ */
+export interface Site {
+  /** Unique identifier for the site */
+  id: string;
+  /** Display name of the site */
+  name: string;
+  /** URL to load in the BrowserView */
+  url: string;
+  /** Optional base64 encoded icon or icon URL */
+  icon?: string;
+  /** Creation timestamp */
+  createdAt: number;
+  /** Last updated timestamp */
+  updatedAt: number;
+}
+
+/**
+ * Input for creating a new site (without auto-generated fields)
+ */
+export interface CreateSiteInput {
+  name: string;
+  url: string;
+  icon?: string;
+}
+
+/**
+ * Input for updating an existing site
+ */
+export interface UpdateSiteInput {
+  id: string;
+  name?: string;
+  url?: string;
+  icon?: string;
+}
+
+/**
+ * User agent mode for responsive testing
+ */
+export type UserAgentMode = 'desktop' | 'mobile';
+
+/**
+ * Application settings
+ */
+export interface AppSettings {
+  /** Currently active site ID */
+  activeSiteId?: string;
+  /** User agent mode (desktop or mobile) */
+  userAgentMode: UserAgentMode;
+  /** Window dimensions */
+  windowWidth: number;
+  windowHeight: number;
+  /** Last export/import path */
+  lastExportPath?: string;
+}
+
+/**
+ * Data structure for import/export
+ */
+export interface ExportData {
+  version: string;
+  exportedAt: number;
+  sites: Site[];
+  settings: AppSettings;
+}
+
+/**
+ * Navigation state for the address bar
+ */
+export interface NavigationState {
+  canGoBack: boolean;
+  canGoForward: boolean;
+  isLoading: boolean;
+  url: string;
+  title: string;
+}
+
+/**
+ * User agent strings for desktop and mobile modes
+ */
+export const USER_AGENTS = {
+  desktop: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  mobile: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+} as const;
