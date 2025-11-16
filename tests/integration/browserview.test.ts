@@ -10,9 +10,9 @@ import { siteStore } from '../../src/main/store';
 import type { Site } from '../../src/common/types';
 
 describe('BrowserView Management Integration', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    siteStore.clear();
+    await siteStore.clear();
   });
 
   describe('BrowserView Creation', () => {
