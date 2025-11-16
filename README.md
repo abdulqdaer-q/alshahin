@@ -107,6 +107,8 @@ electron-menubar-app/
 
 ## Available Scripts
 
+### Development Scripts
+
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Build TypeScript and run the app |
@@ -117,6 +119,20 @@ electron-menubar-app/
 | `npm test` | Run tests with Jest |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage report |
+
+### Production Build Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run pack` | Build app without packaging (for testing) |
+| `npm run dist` | Build and package for distribution (all formats) |
+| `npm run dist:mac` | Build for macOS (all architectures) |
+| `npm run dist:mac:arm64` | Build for Apple Silicon only |
+| `npm run dist:mac:x64` | Build for Intel only |
+| `npm run dist:mac:universal` | Build Universal binary (arm64 + x64) |
+| `npm run release` | Build production release (no auto-publish) |
+
+For detailed build instructions, see the [Build & Release](#build--release) section below.
 
 ## Feature Documentation
 
@@ -594,6 +610,142 @@ Possible additions for future versions:
 - [ ] Offline mode detection
 - [ ] Enhanced ad-blocking with cosmetic filtering
 - [ ] Sync settings across devices
+
+## Build & Release
+
+### Quick Build
+
+For development and testing:
+
+```bash
+# Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
+
+# Test the app
+npm run dev
+```
+
+### Production Build
+
+To create production-ready installers for macOS:
+
+```bash
+# Install dependencies (if not already installed)
+npm install
+
+# Option 1: Use the automated build script (recommended)
+./build_and_package.sh
+
+# Option 2: Use npm scripts
+npm run dist:mac:universal    # Universal binary (arm64 + x64)
+npm run dist:mac:arm64        # Apple Silicon only
+npm run dist:mac:x64          # Intel only
+```
+
+### Build Artifacts
+
+After building, you'll find the following in the `dist/` directory:
+
+- **`.app`** - macOS application bundle
+- **`.dmg`** - Disk image installer (drag-and-drop)
+- **`.pkg`** - macOS installer package
+- **`.zip`** - Compressed app for direct distribution
+
+### Build Script Options
+
+The `build_and_package.sh` script supports various options:
+
+```bash
+./build_and_package.sh --help              # Show all options
+./build_and_package.sh --arm64-only        # Build for Apple Silicon only
+./build_and_package.sh --universal         # Build Universal binary (default)
+./build_and_package.sh --clean             # Clean build
+./build_and_package.sh --skip-signing      # Skip code signing (development)
+./build_and_package.sh --skip-tests        # Skip running tests
+```
+
+### Code Signing & Notarization
+
+For distribution outside of development:
+
+1. **Get Developer ID Certificates** from Apple Developer Program
+   - Developer ID Application (for signing .app)
+   - Developer ID Installer (for signing .pkg)
+
+2. **Set Environment Variables**:
+   ```bash
+   export IDENTITY_APP="Developer ID Application: Your Name (TEAM_ID)"
+   export IDENTITY_INSTALLER="Developer ID Installer: Your Name (TEAM_ID)"
+   ```
+
+3. **For Notarization** (required for macOS 10.14.5+):
+   ```bash
+   export APPLE_ID="your-apple-id@example.com"
+   export APPLE_ID_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # App-specific password
+   export APPLE_TEAM_ID="XXXXXXXXXX"  # Your 10-character Team ID
+   ```
+
+4. **Build with Signing**:
+   ```bash
+   ./build_and_package.sh
+   ```
+
+For detailed instructions on signing, notarization, and troubleshooting, see **[BUILDING.md](BUILDING.md)**.
+
+### Architecture Support
+
+This app supports:
+
+- **Apple Silicon (arm64)**: M1, M2, M3, M4 Macs
+- **Intel (x64)**: Older Intel-based Macs
+- **Universal**: Single binary that works on both (larger file size)
+
+To force a specific architecture:
+
+```bash
+# Apple Silicon only (recommended for modern Macs)
+npm run dist:mac:arm64
+
+# Intel only
+npm run dist:mac:x64
+
+# Universal (compatible with both)
+npm run dist:mac:universal
+```
+
+### Testing Builds
+
+Before distribution:
+
+```bash
+# Run all tests
+npm test
+
+# Test the packaged app
+open dist/mac-arm64/Web\ Apps\ Menubar.app
+
+# Test the DMG
+open dist/Web\ Apps\ Menubar-1.0.0-arm64.dmg
+
+# Test the PKG installer
+sudo installer -pkg dist/Web\ Apps\ Menubar-1.0.0-arm64.pkg -target /
+```
+
+### CI/CD Integration
+
+The build pipeline is designed to work in CI/CD environments:
+
+```bash
+# GitHub Actions example
+- name: Build app
+  run: ./build_and_package.sh --skip-signing
+  env:
+    IDENTITY_APP: ${{ secrets.IDENTITY_APP }}
+    IDENTITY_INSTALLER: ${{ secrets.IDENTITY_INSTALLER }}
+```
 
 ## Contributing
 

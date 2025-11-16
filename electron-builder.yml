@@ -1,0 +1,215 @@
+# electron-builder configuration for macOS Universal builds
+# Supports both Apple Silicon (arm64) and Intel (x64)
+
+appId: com.electron.menubar.app
+productName: Web Apps Menubar
+copyright: Copyright © 2025
+
+# Directories
+directories:
+  output: dist
+  buildResources: assets
+
+# Files to include in the app
+files:
+  - dist/**/*
+  - assets/**/*
+  - src/renderer/**/*.html
+  - src/renderer/**/*.css
+  - package.json
+  - "!**/*.ts"
+  - "!**/*.map"
+  - "!tests"
+  - "!**/*.test.js"
+  - "!.git"
+  - "!.github"
+  - "!tsconfig.json"
+  - "!jest.config.js"
+  - "!TESTING.md"
+
+# ASAR packaging (recommended for production)
+asar: true
+asarUnpack:
+  - "**/node_modules/electron-store/**/*"
+
+# Compression
+compression: maximum
+
+# macOS-specific configuration
+mac:
+  # Build for both Apple Silicon (arm64) and Intel (x64)
+  # Use "universal" for Universal Binary (larger but compatible with both)
+  # Use "arm64" for Apple Silicon only (smaller, M1/M2/M3 only)
+  target:
+    - target: dmg
+      arch:
+        - universal  # Universal binary (arm64 + x64)
+        # - arm64    # Apple Silicon only (uncomment to build arm64-only)
+        # - x64      # Intel only
+    - target: pkg
+      arch:
+        - universal
+        # - arm64
+        # - x64
+    - target: zip
+      arch:
+        - universal
+        # - arm64
+        # - x64
+
+  # App category
+  category: public.app-category.productivity
+
+  # Minimum macOS version
+  minimumSystemVersion: "10.15.0"
+
+  # Hardened runtime (required for notarization)
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+  # Entitlements (required for hardened runtime)
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+  # Code signing (placeholder - replace with your Developer ID)
+  # To sign: set IDENTITY_APP environment variable or use --sign flag
+  # Example: export IDENTITY_APP="Developer ID Application: Your Name (TEAM_ID)"
+  identity: null  # Set to null to skip signing during development
+  # identity: ${IDENTITY_APP}  # Uncomment for production signing
+
+  # Icon
+  icon: assets/iconTemplate.png
+
+  # Dark mode support
+  darkModeSupport: true
+
+  # Type of app
+  type: distribution
+
+  # File associations (optional)
+  # fileAssociations:
+  #   - ext: html
+  #     name: HTML Document
+  #     role: Viewer
+
+# DMG configuration (disk image installer)
+dmg:
+  # DMG title
+  title: "${productName} ${version}"
+
+  # Background image (optional)
+  # background: build/background.png
+
+  # Icon size
+  iconSize: 120
+
+  # Window position and size
+  window:
+    width: 600
+    height: 450
+
+  # Icon positions
+  contents:
+    - x: 150
+      y: 200
+      type: file
+    - x: 450
+      y: 200
+      type: link
+      path: /Applications
+
+  # DMG format
+  format: ULFO  # ULFO (bzip2) provides better compression than UDZO
+
+  # Sign the DMG (placeholder)
+  sign: false  # Set to true and configure identity for production
+
+# PKG configuration (macOS installer package)
+pkg:
+  # Installation location
+  installLocation: /Applications
+
+  # Allow installation for all users
+  allowAnywhere: true
+
+  # Allow current user installation
+  allowCurrentUserHome: true
+
+  # Allow root installation
+  allowRootDirectory: true
+
+  # Signing (placeholder - replace with your Developer ID Installer)
+  # Example: export IDENTITY_INSTALLER="Developer ID Installer: Your Name (TEAM_ID)"
+  identity: null  # Set to null to skip signing during development
+  # identity: ${IDENTITY_INSTALLER}  # Uncomment for production signing
+
+  # Package scripts (optional)
+  # scripts: build/pkg-scripts
+
+  # Background (optional)
+  # background:
+  #   file: build/pkg-background.png
+  #   alignment: center
+  #   scaling: proportional
+
+  # Welcome message (optional)
+  # welcome: build/welcome.html
+
+  # License (optional)
+  # license: LICENSE
+
+  # Conclusion message (optional)
+  # conclusion: build/conclusion.html
+
+# ZIP configuration (for direct app distribution)
+# No additional configuration needed - will create a simple .zip of the .app
+
+# Notarization (for macOS 10.14.5+)
+# Required for distribution outside the Mac App Store
+afterSign: build/notarize.js  # Optional: create this script for automatic notarization
+
+# Build metadata
+buildVersion: ${env.BUILD_NUMBER}  # Can be set via CI/CD
+
+# Auto-update configuration (optional - for future use)
+# publish:
+#   - provider: github
+#     owner: your-username
+#     repo: your-repo
+#   - provider: s3
+#     bucket: your-bucket
+
+# Extra metadata
+extraMetadata:
+  main: dist/main/main.js
+
+# Protocol associations (optional)
+# protocols:
+#   - name: web-apps-menubar
+#     schemes:
+#       - wam
+
+# Snap configuration (Linux - optional)
+# snap:
+#   confinement: strict
+#   grade: stable
+
+# AppImage configuration (Linux - optional)
+# appImage:
+#   license: LICENSE
+
+# Windows configuration (optional - for future cross-platform support)
+# win:
+#   target:
+#     - nsis
+#     - portable
+#   icon: assets/icon.ico
+
+# Linux configuration (optional - for future cross-platform support)
+# linux:
+#   target:
+#     - AppImage
+#     - deb
+#     - rpm
+#   category: Utility
+#   icon: assets/
