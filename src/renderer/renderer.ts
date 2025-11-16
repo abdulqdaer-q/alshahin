@@ -87,17 +87,36 @@ const settingsBtnImportExport = document.getElementById('settings-btn-import-exp
 
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('Renderer process initialized');
+  console.log('DOMContentLoaded event fired');
 
-  // Load initial data
-  await loadSites();
-  await loadSettings();
-  await loadStoragePath();
+  try {
+    // Load initial data
+    console.log('Loading sites...');
+    await loadSites();
+    console.log('Sites loaded:', sites.length);
 
-  // Setup navigation listeners
-  window.electronAPI.navigation.onStateChange(handleNavigationStateChange);
+    console.log('Loading settings...');
+    await loadSettings();
+    console.log('Settings loaded');
 
-  // Setup event listeners
-  setupEventListeners();
+    console.log('Loading storage path...');
+    await loadStoragePath();
+    console.log('Storage path loaded');
+
+    // Setup navigation listeners
+    console.log('Setting up navigation listeners...');
+    window.electronAPI.navigation.onStateChange(handleNavigationStateChange);
+    console.log('Navigation listeners set up');
+
+    // Setup event listeners
+    console.log('Setting up event listeners...');
+    setupEventListeners();
+    console.log('Event listeners set up successfully');
+
+    console.log('Initialization complete!');
+  } catch (error) {
+    console.error('Error during initialization:', error);
+  }
 });
 
 /**
@@ -158,20 +177,64 @@ async function loadStoragePath(): Promise<void> {
 // ============================================================================
 
 function setupEventListeners(): void {
+  console.log('Setting up event listeners for buttons...');
+
+  // Debug: Check if DOM elements exist
+  console.log('btnBack exists:', !!btnBack);
+  console.log('btnAddSite exists:', !!btnAddSite);
+  console.log('btnSettings exists:', !!btnSettings);
+
   // Navigation controls
-  btnBack.addEventListener('click', () => window.electronAPI.navigation.back());
-  btnForward.addEventListener('click', () => window.electronAPI.navigation.forward());
-  btnReload.addEventListener('click', () => window.electronAPI.navigation.reload());
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      console.log('Back button clicked');
+      window.electronAPI.navigation.back();
+    });
+  }
+  if (btnForward) {
+    btnForward.addEventListener('click', () => {
+      console.log('Forward button clicked');
+      window.electronAPI.navigation.forward();
+    });
+  }
+  if (btnReload) {
+    btnReload.addEventListener('click', () => {
+      console.log('Reload button clicked');
+      window.electronAPI.navigation.reload();
+    });
+  }
 
   // User agent toggle
   btnUaDesktop.addEventListener('click', () => setUserAgentMode('desktop'));
   btnUaMobile.addEventListener('click', () => setUserAgentMode('mobile'));
 
   // Action buttons
-  btnAddSite.addEventListener('click', showAddSiteModal);
-  btnSettings.addEventListener('click', showSettingsModal);
-  btnAlwaysOnTop.addEventListener('click', togglePopoverAlwaysOnTop);
-  btnAdBlock.addEventListener('click', toggleAdBlock);
+  if (btnAddSite) {
+    console.log('Adding click listener to Add Site button');
+    btnAddSite.addEventListener('click', () => {
+      console.log('Add Site button clicked!');
+      showAddSiteModal();
+    });
+  }
+  if (btnSettings) {
+    console.log('Adding click listener to Settings button');
+    btnSettings.addEventListener('click', () => {
+      console.log('Settings button clicked!');
+      showSettingsModal();
+    });
+  }
+  if (btnAlwaysOnTop) {
+    btnAlwaysOnTop.addEventListener('click', () => {
+      console.log('Always on Top button clicked');
+      togglePopoverAlwaysOnTop();
+    });
+  }
+  if (btnAdBlock) {
+    btnAdBlock.addEventListener('click', () => {
+      console.log('Ad Block button clicked');
+      toggleAdBlock();
+    });
+  }
 
   // Site modal
   modalSiteClose.addEventListener('click', hideSiteModal);
