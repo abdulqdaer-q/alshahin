@@ -14,6 +14,17 @@ A feature-rich Electron menubar application for managing multiple web apps in a 
 - **Persistent Storage**: All sites and settings saved automatically using electron-store
 - **Import/Export**: Backup and restore your sites collection as JSON
 
+### Advanced Features (NEW)
+
+- **Pin Sites**: Open sites as standalone always-on-top windows with dedicated tray icons
+- **Cookie Isolation**: Each site runs in a separate session partition for complete cookie/storage isolation
+- **Ad-Blocking**: Built-in ad-blocker that blocks common ad and tracking domains
+- **Always-on-Top**: Toggle always-on-top mode for both popover and pinned windows
+- **Custom Icons**: Set custom icons for sites (shown in tabs and tray for pinned windows)
+- **Keyboard Shortcuts**: Global shortcuts for toggling popover, cycling sites, and opening DevTools
+- **Enhanced Context Menu**: Right-click sites for Pin, Edit, Delete, and Open in Browser options
+- **Session Persistence**: Pinned windows and settings restore automatically on app restart
+
 ### UI Features
 
 - Clean, modern interface with navigation controls
@@ -69,18 +80,26 @@ npm run dev
 electron-menubar-app/
 ├── src/
 │   ├── common/
-│   │   └── types.ts          # Shared TypeScript types
+│   │   └── types.ts               # Shared TypeScript types, constants, ad-block domains
 │   ├── main/
-│   │   ├── main.ts           # Main process with BrowserView management
-│   │   ├── preload.ts        # Secure IPC bridge
-│   │   └── store.ts          # Persistent storage using electron-store
+│   │   ├── main.ts                # Main process with BrowserView management & keyboard shortcuts
+│   │   ├── preload.ts             # Secure IPC bridge with extended API
+│   │   ├── store.ts               # Persistent storage using electron-store
+│   │   ├── sessionManager.ts      # Cookie isolation & ad-blocking (NEW)
+│   │   └── pinManager.ts          # Pinned window management (NEW)
 │   └── renderer/
-│       ├── index.html        # UI markup with controls and modals
-│       ├── renderer.ts       # UI logic and event handlers
-│       └── styles.css        # Modern, responsive styling
+│       ├── index.html             # UI markup with controls, modals, and settings
+│       ├── renderer.ts            # UI logic and event handlers
+│       └── styles.css             # Modern, responsive styling
+├── tests/
+│   ├── main/
+│   │   ├── sessionManager.test.ts # Session manager tests (NEW)
+│   │   ├── pinManager.test.ts     # Pin manager tests (NEW)
+│   │   └── ...                    # Other test files
+│   └── ...
 ├── assets/
-│   └── iconTemplate.png      # Tray icon (16x16 PNG)
-├── dist/                     # Compiled JavaScript (generated)
+│   └── iconTemplate.png           # Tray icon (16x16 PNG)
+├── dist/                          # Compiled JavaScript (generated)
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -158,6 +177,134 @@ Toggle between desktop and mobile user agents:
   ```
 
 When you switch modes, the current site automatically reloads with the new user agent.
+
+### Advanced Features
+
+#### Pinning Sites
+
+Pin any site to create a standalone window that stays open independently of the popover:
+
+1. Right-click on a site tab
+2. Select **Pin Site** from the context menu
+3. A new window opens with the site, plus a tray icon for quick access
+4. The pinned window can be configured as always-on-top
+5. Right-click on the pinned window's tray icon for options
+
+**Benefits of Pinning:**
+- Keep important sites always visible
+- Each pinned window has its own dedicated tray icon
+- Custom icons (if set) appear in the tray
+- Pinned windows persist across app restarts
+- Independent always-on-top control per window
+
+**Unpinning:**
+- Right-click the site tab and select "Unpin Site"
+- Or close the pinned window directly
+
+#### Cookie & Session Isolation
+
+Every site runs in a completely isolated session partition:
+
+```
+persist:site-[site-id]
+```
+
+This means:
+- **No Shared Cookies**: Site A cannot access Site B's cookies
+- **Separate LocalStorage**: Each site has independent storage
+- **Isolated Cache**: Cache is not shared between sites
+- **Independent Sessions**: Login sessions are completely separate
+
+**Testing Cookie Isolation:**
+1. Add the same site twice (e.g., "Gmail Work" and "Gmail Personal")
+2. Log in to different accounts on each
+3. Both will maintain separate sessions without conflicts
+
+**Clearing Site Data:**
+Deleting a site automatically clears all associated cookies, cache, and storage.
+
+#### Ad-Blocking
+
+Built-in ad-blocker that blocks requests to common ad and tracking domains.
+
+**Enabling Ad-Blocking:**
+1. Click the Settings button (⚙️) or the Shield button in the header
+2. Toggle "Enable ad-blocking"
+3. All sites will immediately start blocking ads
+
+**How It Works:**
+- Uses Electron's `webRequest` API to intercept network requests
+- Blocks requests to ~27 common ad/tracking domains including:
+  - doubleclick.net, googlesyndication.com
+  - facebook.com/tr, platform.twitter.com
+  - outbrain.com, taboola.com
+  - And many more (see `AD_BLOCK_DOMAINS` in types.ts)
+
+**Testing Ad-Blocking:**
+1. Enable ad-blocking in settings
+2. Visit a news site with ads (e.g., cnn.com)
+3. Observe blocked ads in the console (if DevTools are open)
+4. Disable ad-blocking to compare
+
+**Limitations:**
+- Basic domain-based blocking (not as comprehensive as uBlock Origin)
+- Some ads may still appear if served from the same domain
+- Does not block first-party tracking
+
+#### Always-on-Top
+
+Keep windows visible above other applications:
+
+**Popover Always-on-Top:**
+1. Click the Always-on-Top button (↑) in the header
+2. Or toggle in Settings
+3. The popover will stay above other windows
+
+**Pinned Window Always-on-Top:**
+- Each pinned window can independently be set as always-on-top
+- Right-click the pinned window's tray icon
+- Select "Enable Always on Top" / "Disable Always on Top"
+
+#### Keyboard Shortcuts
+
+Global shortcuts work even when the app is in the background:
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + Shift + X` | Toggle popover window |
+| `Cmd/Ctrl + Tab` | Cycle through sites (when popover is open) |
+| `Cmd/Ctrl + Alt + I` | Open DevTools for current site |
+
+**Notes:**
+- Shortcuts are registered at app startup
+- They work system-wide, even when the app is not focused
+- Customize by editing `registerKeyboardShortcuts()` in main.ts
+
+#### Custom Icons
+
+Set custom icons for your sites:
+
+**Setting an Icon:**
+1. When adding/editing a site, enter an icon URL or base64 data
+2. Examples:
+   ```
+   URL: https://github.com/favicon.ico
+   Base64: data:image/png;base64,iVBORw0KG...
+   ```
+
+**Icon Storage:**
+- Icons are saved to: `[app-data]/icons/[site-id].png`
+- Automatically deleted when site is deleted
+- Used in site tabs and pinned window tray icons
+
+#### Enhanced Context Menu
+
+Right-click any site tab for quick actions:
+
+- **Pin Site** / **Unpin Site**: Toggle pinned window
+- **Edit Site**: Modify name, URL, or icon
+- **Open in Browser**: Open site in default browser
+- **Delete Site**: Remove site and clear all data
 
 ### Import/Export
 
@@ -408,19 +555,45 @@ Replace `assets/iconTemplate.png` with your own 16x16 PNG. Use a monochrome icon
 - No sensitive data should be stored unencrypted
 - Consider encryption for sensitive sites
 
+## Known Limitations & Caveats
+
+### Cookie Isolation
+- **Not 100% identical to separate browsers**: While session partitions provide strong isolation, they still run within the same Electron app
+- **Shared process pool**: Sites share the same Chromium process pool (though data is isolated)
+- **Browser fingerprinting**: Sites may still detect they're running in Electron
+
+### Ad-Blocking
+- **Basic domain-based blocking**: Not as comprehensive as browser extensions like uBlock Origin
+- **No cosmetic filtering**: Only blocks network requests, doesn't hide ad placeholders
+- **First-party ads**: Cannot block ads served from the same domain as the site
+- **Requires restart**: Changes to the ad-block domains list require app recompilation
+
+### Pinned Windows
+- **Memory usage**: Each pinned window runs a separate BrowserView (memory intensive)
+- **No synchronization**: Pinned windows and popover views are independent
+- **Tray icon limitations**: macOS menubar has limited space for many pinned windows
+
+### Browser Detection
+- **Some sites may detect**: Certain sites can detect they're running in Electron
+- **X-Frame-Options**: Some sites block embedding entirely
+- **Service workers**: May behave differently than in regular browsers
+
 ## Future Enhancements
 
 Possible additions for future versions:
 
-- [ ] Keyboard shortcuts for site switching
+- [x] Keyboard shortcuts for site switching ✅
+- [x] Session management (cookies, storage) ✅
+- [x] Pin to standalone windows ✅
 - [ ] Search/filter sites
 - [ ] Site groups or folders
 - [ ] Custom CSS injection per site
 - [ ] Screenshot/thumbnail for each site
-- [ ] Session management (cookies, storage)
 - [ ] Notification badges
 - [ ] Auto-update checking
 - [ ] Offline mode detection
+- [ ] Enhanced ad-blocking with cosmetic filtering
+- [ ] Sync settings across devices
 
 ## Contributing
 
