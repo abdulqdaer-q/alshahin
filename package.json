@@ -5,8 +5,9 @@
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "npm run build && electron .",
-    "build": "npm run clean && tsc && npm run copy-assets",
+    "build": "npm run clean && tsc && npm run copy-assets && npm run verify-build",
     "copy-assets": "mkdir -p dist/renderer && cp src/renderer/index.html dist/renderer/ && cp src/renderer/styles.css dist/renderer/",
+    "verify-build": "node -e \"const fs = require('fs'); const files = ['dist/main/main.js', 'dist/main/preload.js', 'dist/renderer/renderer.js', 'dist/renderer/index.html', 'dist/renderer/styles.css']; files.forEach(f => { if (!fs.existsSync(f)) { console.error('Missing:', f); process.exit(1); } else { console.log('✓', f); } }); console.log('\\nBuild verification passed!');\"",
     "watch": "tsc --watch",
     "start": "electron .",
     "clean": "rm -rf dist",
