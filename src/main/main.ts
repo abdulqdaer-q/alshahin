@@ -97,7 +97,7 @@ function toggleWindow(): void {
     createWindow();
   }
 
-  if (window.isVisible()) {
+  if (window && window.isVisible()) {
     window.hide();
   } else {
     showWindow();

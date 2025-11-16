@@ -5,13 +5,12 @@
 import { contextBridge } from 'electron';
 
 describe('Preload Script', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeAll(() => {
+    // Load the preload script once
+    require('../../src/main/preload');
   });
 
   it('should expose electronAPI to main world', () => {
-    require('../../src/main/preload');
-
     expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith(
       'electronAPI',
       expect.any(Object)
@@ -19,18 +18,17 @@ describe('Preload Script', () => {
   });
 
   it('should expose platform information', () => {
-    require('../../src/main/preload');
-
-    const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+    const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    const [, exposedAPI] = calls[0];
     expect(exposedAPI.platform).toBeDefined();
     expect(typeof exposedAPI.platform).toBe('string');
   });
 
   describe('Site Management API', () => {
     it('should expose site CRUD methods', () => {
-      require('../../src/main/preload');
-
-      const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const [, exposedAPI] = calls[0];
       expect(exposedAPI.site).toBeDefined();
       expect(typeof exposedAPI.site.getAll).toBe('function');
       expect(typeof exposedAPI.site.getById).toBe('function');
@@ -43,9 +41,8 @@ describe('Preload Script', () => {
 
   describe('Navigation API', () => {
     it('should expose navigation control methods', () => {
-      require('../../src/main/preload');
-
-      const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const [, exposedAPI] = calls[0];
       expect(exposedAPI.navigation).toBeDefined();
       expect(typeof exposedAPI.navigation.back).toBe('function');
       expect(typeof exposedAPI.navigation.forward).toBe('function');
@@ -59,9 +56,8 @@ describe('Preload Script', () => {
 
   describe('Settings API', () => {
     it('should expose settings methods', () => {
-      require('../../src/main/preload');
-
-      const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const [, exposedAPI] = calls[0];
       expect(exposedAPI.settings).toBeDefined();
       expect(typeof exposedAPI.settings.getAll).toBe('function');
       expect(typeof exposedAPI.settings.update).toBe('function');
@@ -71,9 +67,8 @@ describe('Preload Script', () => {
 
   describe('Import/Export API', () => {
     it('should expose import/export methods', () => {
-      require('../../src/main/preload');
-
-      const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const [, exposedAPI] = calls[0];
       expect(exposedAPI.importExport).toBeDefined();
       expect(typeof exposedAPI.importExport.showImportDialog).toBe('function');
       expect(typeof exposedAPI.importExport.importFromFile).toBe('function');
@@ -85,18 +80,16 @@ describe('Preload Script', () => {
 
   describe('App Utility API', () => {
     it('should expose app utility methods', () => {
-      require('../../src/main/preload');
-
-      const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+      const [, exposedAPI] = calls[0];
       expect(exposedAPI.app).toBeDefined();
       expect(typeof exposedAPI.app.getStoragePath).toBe('function');
     });
   });
 
   it('should expose complete type-safe API', () => {
-    require('../../src/main/preload');
-
-    const [[, exposedAPI]] = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+    const calls = (contextBridge.exposeInMainWorld as jest.Mock).mock.calls;
+    const [, exposedAPI] = calls[0];
 
     // Verify all top-level API namespaces
     expect(exposedAPI).toHaveProperty('site');

@@ -63,8 +63,8 @@ describe('SessionManager', () => {
       sessionManager.setAdBlockEnabled(false);
       sessionManager.getSessionForSite('test-site');
 
-      // Should still be called to set up the handler
-      expect(mockSession.webRequest.onBeforeRequest).toHaveBeenCalled();
+      // Should not set up ad-blocking handler when disabled
+      expect(mockSession.webRequest.onBeforeRequest).not.toHaveBeenCalled();
     });
   });
 

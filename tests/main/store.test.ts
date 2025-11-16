@@ -11,13 +11,17 @@ jest.mock('fs', () => ({
   promises: {
     writeFile: jest.fn(() => Promise.resolve()),
     readFile: jest.fn(() => Promise.resolve('{}')),
+    copyFile: jest.fn(() => Promise.resolve()),
+    unlink: jest.fn(() => Promise.resolve()),
   },
+  existsSync: jest.fn(() => false),
+  mkdirSync: jest.fn(),
 }));
 
 describe('Storage Layer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear all sites before each test
-    siteStore.clear();
+    await siteStore.clear();
     settingsStore.reset();
     jest.clearAllMocks();
   });
@@ -141,11 +145,9 @@ describe('Storage Layer', () => {
         const site = siteStore.add({ name: 'Test', url: 'https://test.com' });
         const originalUpdatedAt = site.updatedAt;
 
-        // Wait a bit to ensure timestamp difference
-        jest.advanceTimersByTime(10);
-
         const updated = siteStore.update(site.id, { name: 'Updated' });
         expect(updated?.updatedAt).toBeGreaterThanOrEqual(originalUpdatedAt);
+        expect(updated?.updatedAt).toBeDefined();
       });
 
       it('should not modify createdAt timestamp', () => {
@@ -157,24 +159,24 @@ describe('Storage Layer', () => {
     });
 
     describe('delete', () => {
-      it('should return false for non-existent site', () => {
-        const result = siteStore.delete('non-existent-id');
+      it('should return false for non-existent site', async () => {
+        const result = await siteStore.delete('non-existent-id');
         expect(result).toBe(false);
       });
 
-      it('should delete a site and return true', () => {
+      it('should delete a site and return true', async () => {
         const site = siteStore.add({ name: 'Test', url: 'https://test.com' });
-        const result = siteStore.delete(site.id);
+        const result = await siteStore.delete(site.id);
 
         expect(result).toBe(true);
         expect(siteStore.getById(site.id)).toBeUndefined();
       });
 
-      it('should remove site from the list', () => {
+      it('should remove site from the list', async () => {
         const site1 = siteStore.add({ name: 'Site 1', url: 'https://site1.com' });
         const site2 = siteStore.add({ name: 'Site 2', url: 'https://site2.com' });
 
-        siteStore.delete(site1.id);
+        await siteStore.delete(site1.id);
 
         const sites = siteStore.getAll();
         expect(sites).toHaveLength(1);
@@ -183,11 +185,11 @@ describe('Storage Layer', () => {
     });
 
     describe('clear', () => {
-      it('should remove all sites', () => {
+      it('should remove all sites', async () => {
         siteStore.add({ name: 'Site 1', url: 'https://site1.com' });
         siteStore.add({ name: 'Site 2', url: 'https://site2.com' });
 
-        siteStore.clear();
+        await siteStore.clear();
 
         expect(siteStore.getAll()).toHaveLength(0);
       });
