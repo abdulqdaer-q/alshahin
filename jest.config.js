@@ -27,6 +27,7 @@ module.exports = {
   // Mock Electron modules
   moduleNameMapper: {
     '^electron$': '<rootDir>/tests/__mocks__/electron.ts',
+    '^electron-store$': '<rootDir>/tests/__mocks__/electron-store.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };

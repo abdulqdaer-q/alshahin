@@ -4,44 +4,172 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-  <title>Electron Menubar App</title>
+  <title>Web Apps Menubar</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Electron Menubar</h1>
-      <p class="subtitle">A minimal TypeScript menubar app</p>
-    </header>
+  <!-- Header with Controls -->
+  <header class="header">
+    <!-- Navigation Controls -->
+    <div class="nav-controls">
+      <button id="btn-back" class="nav-btn" title="Back" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button id="btn-forward" class="nav-btn" title="Forward" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button id="btn-reload" class="nav-btn" title="Reload">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C10.3456 2 12.3999 3.24924 13.4854 5.11111" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M11 2L13.5 5L10.5 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
 
-    <main>
-      <div class="card">
-        <h2>Welcome</h2>
-        <p>This is a minimal Electron menubar application built with TypeScript.</p>
+      <!-- User Agent Toggle -->
+      <div class="ua-toggle">
+        <button id="btn-ua-desktop" class="ua-btn active" title="Desktop Mode">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="3" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 13H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M8 11V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button id="btn-ua-mobile" class="ua-btn" title="Mobile Mode">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="5" y="2" width="6" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="8" cy="12" r="0.5" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
+    </div>
 
-      <div class="card">
-        <h3>Features</h3>
-        <ul>
-          <li>macOS menu bar integration</li>
-          <li>Frameless popover window</li>
-          <li>TypeScript support</li>
-          <li>Context isolation enabled</li>
-          <li>Resizable window</li>
-        </ul>
+    <!-- Address Bar -->
+    <div class="address-bar">
+      <span id="address-url" class="address-url" title="">No site loaded</span>
+      <div id="loading-spinner" class="loading-spinner hidden"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-controls">
+      <button id="btn-add-site" class="action-btn" title="Add Site">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="btn-import-export" class="action-btn" title="Import/Export">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2V10M8 2L5 5M8 2L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 12V13C3 13.5523 3.44772 14 4 14H12C12.5523 14 13 13.5523 13 13V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sites Tabs -->
+  <div id="sites-tabs" class="sites-tabs">
+    <!-- Tabs will be inserted here dynamically -->
+  </div>
+
+  <!-- Main Content Area (BrowserView renders below this in main process) -->
+  <div id="empty-state" class="empty-state">
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="empty-icon">
+      <rect x="8" y="16" width="48" height="32" rx="2" stroke="currentColor" stroke-width="2"/>
+      <path d="M8 24H56" stroke="currentColor" stroke-width="2"/>
+      <circle cx="14" cy="20" r="1.5" fill="currentColor"/>
+      <circle cx="20" cy="20" r="1.5" fill="currentColor"/>
+      <circle cx="26" cy="20" r="1.5" fill="currentColor"/>
+    </svg>
+    <h3>No Sites Added</h3>
+    <p>Click the + button to add your first web app</p>
+  </div>
+
+  <!-- Modals -->
+
+  <!-- Add/Edit Site Modal -->
+  <div id="modal-site" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-site-title">Add Site</h2>
+        <button class="modal-close" id="modal-site-close">&times;</button>
       </div>
+      <form id="form-site" class="modal-body">
+        <input type="hidden" id="site-id" />
 
-      <div class="card info">
-        <p><strong>Platform:</strong> <span id="platform">Loading...</span></p>
-        <p><strong>Electron:</strong> <span id="electron-version">Loading...</span></p>
-        <p><strong>Node:</strong> <span id="node-version">Loading...</span></p>
-        <p><strong>Chrome:</strong> <span id="chrome-version">Loading...</span></p>
+        <div class="form-group">
+          <label for="site-name">Name *</label>
+          <input type="text" id="site-name" placeholder="My Web App" required />
+        </div>
+
+        <div class="form-group">
+          <label for="site-url">URL *</label>
+          <input type="url" id="site-url" placeholder="https://example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label for="site-icon">Icon (optional)</label>
+          <input type="text" id="site-icon" placeholder="https://example.com/icon.png or base64" />
+          <small>Enter a URL or base64-encoded image</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-site-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-site-save">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Import/Export Modal -->
+  <div id="modal-import-export" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Import / Export Sites</h2>
+        <button class="modal-close" id="modal-ie-close">&times;</button>
       </div>
-    </main>
+      <div class="modal-body">
+        <div class="ie-section">
+          <h3>Export</h3>
+          <p>Save your sites and settings to a JSON file</p>
+          <button type="button" class="btn btn-primary" id="btn-export">Export to File</button>
+        </div>
 
-    <footer>
-      <p class="hint">Click outside to hide this window</p>
-    </footer>
+        <div class="ie-divider"></div>
+
+        <div class="ie-section">
+          <h3>Import</h3>
+          <p>Load sites from a JSON file</p>
+          <div class="import-options">
+            <label>
+              <input type="radio" name="import-mode" value="replace" checked />
+              Replace all sites
+            </label>
+            <label>
+              <input type="radio" name="import-mode" value="merge" />
+              Merge with existing sites
+            </label>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-import">Import from File</button>
+        </div>
+
+        <div class="ie-divider"></div>
+
+        <div class="ie-section">
+          <h3>Storage Location</h3>
+          <p id="storage-path" class="storage-path">Loading...</p>
+          <small>Sites are automatically saved to this file</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Site Context Menu (for edit/delete) -->
+  <div id="context-menu" class="context-menu hidden">
+    <div class="context-menu-item" id="ctx-edit">Edit Site</div>
+    <div class="context-menu-item" id="ctx-delete">Delete Site</div>
   </div>
 
   <script src="renderer.js"></script>
