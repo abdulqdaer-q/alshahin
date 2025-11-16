@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   userAgentMode: 'desktop',
   windowWidth: 800,
   windowHeight: 600,
+  popoverAlwaysOnTop: false,
+  adBlockEnabled: false,
 };
 
 /**
@@ -108,7 +110,7 @@ export const siteStore = {
   /**
    * Delete a site by ID
    */
-  delete(id: string): boolean {
+  async delete(id: string): Promise<boolean> {
     const sites = store.get('sites', []);
     const filtered = sites.filter(site => site.id !== id);
 
@@ -117,13 +119,28 @@ export const siteStore = {
     }
 
     store.set('sites', filtered);
+
+    // Delete associated icon file
+    await iconStore.deleteIcon(id).catch(err => {
+      console.error('Failed to delete icon:', err);
+    });
+
     return true;
   },
 
   /**
    * Clear all sites
    */
-  clear(): void {
+  async clear(): Promise<void> {
+    const sites = store.get('sites', []);
+
+    // Delete all icon files
+    await Promise.all(
+      sites.map(site => iconStore.deleteIcon(site.id).catch(err => {
+        console.error('Failed to delete icon:', err);
+      }))
+    );
+
     store.set('sites', []);
   },
 };
@@ -243,6 +260,93 @@ export const importExport = {
       const currentSettings = settingsStore.getAll();
       store.set('settings', { ...currentSettings, ...data.settings });
     }
+  },
+};
+
+/**
+ * Icon management functions
+ */
+export const iconStore = {
+  /**
+   * Get the icons directory path
+   */
+  getIconsDir(): string {
+    const iconsDir = path.join(app.getPath('userData'), 'icons');
+    if (!fs.existsSync(iconsDir)) {
+      fs.mkdirSync(iconsDir, { recursive: true });
+    }
+    return iconsDir;
+  },
+
+  /**
+   * Save an icon file to the app data directory
+   * @param siteId - Site ID
+   * @param iconData - Base64 encoded icon data or buffer
+   * @returns Path to the saved icon file
+   */
+  async saveIcon(siteId: string, iconData: string | Buffer): Promise<string> {
+    const iconsDir = this.getIconsDir();
+    const iconPath = path.join(iconsDir, `${siteId}.png`);
+
+    if (typeof iconData === 'string') {
+      // Handle base64 data URL
+      if (iconData.startsWith('data:')) {
+        const base64Data = iconData.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        await fs.promises.writeFile(iconPath, buffer);
+      } else {
+        // Handle base64 string without prefix
+        const buffer = Buffer.from(iconData, 'base64');
+        await fs.promises.writeFile(iconPath, buffer);
+      }
+    } else {
+      // Handle buffer
+      await fs.promises.writeFile(iconPath, iconData);
+    }
+
+    return iconPath;
+  },
+
+  /**
+   * Delete an icon file
+   * @param siteId - Site ID
+   */
+  async deleteIcon(siteId: string): Promise<void> {
+    const iconsDir = this.getIconsDir();
+    const iconPath = path.join(iconsDir, `${siteId}.png`);
+
+    if (fs.existsSync(iconPath)) {
+      await fs.promises.unlink(iconPath);
+    }
+  },
+
+  /**
+   * Get icon path for a site
+   * @param siteId - Site ID
+   */
+  getIconPath(siteId: string): string | null {
+    const iconsDir = this.getIconsDir();
+    const iconPath = path.join(iconsDir, `${siteId}.png`);
+
+    return fs.existsSync(iconPath) ? iconPath : null;
+  },
+
+  /**
+   * Copy icon from one site to another
+   * @param sourceSiteId - Source site ID
+   * @param targetSiteId - Target site ID
+   */
+  async copyIcon(sourceSiteId: string, targetSiteId: string): Promise<string | null> {
+    const sourceIconPath = this.getIconPath(sourceSiteId);
+    if (!sourceIconPath) {
+      return null;
+    }
+
+    const iconsDir = this.getIconsDir();
+    const targetIconPath = path.join(iconsDir, `${targetSiteId}.png`);
+    await fs.promises.copyFile(sourceIconPath, targetIconPath);
+
+    return targetIconPath;
   },
 };
 

@@ -63,6 +63,27 @@ const electronAPI = {
     switch: (siteId: string): Promise<boolean> => {
       return ipcRenderer.invoke('site:switch', siteId);
     },
+
+    /**
+     * Open site in default browser
+     */
+    openInBrowser: (siteId: string): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('site:openInBrowser', siteId);
+    },
+
+    /**
+     * Listen for site cycle events (from keyboard shortcut)
+     */
+    onSiteCycled: (callback: (siteId: string) => void): void => {
+      ipcRenderer.on('site-cycled', (_event, siteId) => callback(siteId));
+    },
+
+    /**
+     * Remove site cycle listener
+     */
+    removeSiteCycledListener: (): void => {
+      ipcRenderer.removeAllListeners('site-cycled');
+    },
   },
 
   // ============================================================================
@@ -185,6 +206,141 @@ const electronAPI = {
      */
     exportToJson: (): Promise<string> => {
       return ipcRenderer.invoke('export:toJson');
+    },
+  },
+
+  // ============================================================================
+  // Pin Management
+  // ============================================================================
+
+  pin: {
+    /**
+     * Create a pinned window for a site
+     */
+    create: (siteId: string): Promise<{ success: boolean; error?: string; windowId?: number }> => {
+      return ipcRenderer.invoke('pin:create', siteId);
+    },
+
+    /**
+     * Close a pinned window
+     */
+    close: (siteId: string): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('pin:close', siteId);
+    },
+
+    /**
+     * Toggle pin state for a site
+     */
+    toggle: (siteId: string): Promise<{ success: boolean; pinned: boolean; error?: string }> => {
+      return ipcRenderer.invoke('pin:toggle', siteId);
+    },
+
+    /**
+     * Check if a site is pinned
+     */
+    isPinned: (siteId: string): Promise<boolean> => {
+      return ipcRenderer.invoke('pin:isPinned', siteId);
+    },
+
+    /**
+     * Set always-on-top for a pinned window
+     */
+    setAlwaysOnTop: (siteId: string, alwaysOnTop: boolean): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('pin:setAlwaysOnTop', siteId, alwaysOnTop);
+    },
+
+    /**
+     * Open DevTools for a pinned window
+     */
+    openDevTools: (siteId: string): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('pin:openDevTools', siteId);
+    },
+  },
+
+  // ============================================================================
+  // Popover Window
+  // ============================================================================
+
+  popover: {
+    /**
+     * Set always-on-top for popover window
+     */
+    setAlwaysOnTop: (alwaysOnTop: boolean): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('popover:setAlwaysOnTop', alwaysOnTop);
+    },
+
+    /**
+     * Check if popover is always on top
+     */
+    isAlwaysOnTop: (): Promise<boolean> => {
+      return ipcRenderer.invoke('popover:isAlwaysOnTop');
+    },
+  },
+
+  // ============================================================================
+  // Ad-Blocking
+  // ============================================================================
+
+  adblock: {
+    /**
+     * Enable or disable ad-blocking
+     */
+    setEnabled: (enabled: boolean): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('adblock:setEnabled', enabled);
+    },
+
+    /**
+     * Check if ad-blocking is enabled
+     */
+    isEnabled: (): Promise<boolean> => {
+      return ipcRenderer.invoke('adblock:isEnabled');
+    },
+  },
+
+  // ============================================================================
+  // Icon Management
+  // ============================================================================
+
+  icon: {
+    /**
+     * Save a custom icon for a site
+     */
+    save: (siteId: string, iconData: string): Promise<{ success: boolean; iconPath?: string; error?: string }> => {
+      return ipcRenderer.invoke('icon:save', siteId, iconData);
+    },
+
+    /**
+     * Delete a custom icon
+     */
+    delete: (siteId: string): Promise<{ success: boolean; error?: string }> => {
+      return ipcRenderer.invoke('icon:delete', siteId);
+    },
+
+    /**
+     * Get icon path for a site
+     */
+    getPath: (siteId: string): Promise<string | null> => {
+      return ipcRenderer.invoke('icon:getPath', siteId);
+    },
+  },
+
+  // ============================================================================
+  // DevTools
+  // ============================================================================
+
+  devtools: {
+    /**
+     * Open DevTools for current BrowserView
+     */
+    open: (): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('devtools:open');
+    },
+
+    /**
+     * Open DevTools for popover window
+     */
+    openPopover: (): Promise<{ success: boolean }> => {
+      return ipcRenderer.invoke('devtools:openPopover');
     },
   },
 
