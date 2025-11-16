@@ -8,10 +8,12 @@
  * - Navigation controls and user agent switching
  */
 
-import { app, BrowserWindow, BrowserView, Tray, screen, nativeImage, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, BrowserView, Tray, screen, nativeImage, ipcMain, dialog, globalShortcut } from 'electron';
 import * as path from 'path';
-import { siteStore, settingsStore, importExport, getStoragePath } from './store';
+import { siteStore, settingsStore, importExport, getStoragePath, iconStore } from './store';
 import { Site, CreateSiteInput, UpdateSiteInput, UserAgentMode, USER_AGENTS, NavigationState } from '../common/types';
+import { sessionManager } from './sessionManager';
+import { pinManager } from './pinManager';
 
 let tray: Tray | null = null;
 let window: BrowserWindow | null = null;
@@ -34,6 +36,7 @@ function createWindow(): void {
     frame: false,
     resizable: true,
     transparent: false,
+    alwaysOnTop: settings.popoverAlwaysOnTop || false,
     backgroundColor: '#f5f5f5',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -143,13 +146,16 @@ function createBrowserView(site: Site): BrowserView {
   const settings = settingsStore.getAll();
   const userAgent = USER_AGENTS[settings.userAgentMode];
 
+  // Get isolated session for this site
+  const siteSession = sessionManager.getSessionForSite(site.id);
+
   const browserView = new BrowserView({
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true, // Enhanced security
       webSecurity: true,
-      // Set user agent for responsive mode
+      session: siteSession, // Use isolated session for cookie isolation
     },
   });
 
@@ -301,8 +307,18 @@ ipcMain.handle('site:update', (_event, input: UpdateSiteInput) => {
   return updated;
 });
 
-ipcMain.handle('site:delete', (_event, id: string) => {
-  const success = siteStore.delete(id);
+ipcMain.handle('site:delete', async (_event, id: string) => {
+  // Close pinned window if exists
+  if (pinManager.isPinned(id)) {
+    pinManager.closePinnedWindow(id);
+  }
+
+  // Clear site data from session
+  await sessionManager.clearSiteData(id);
+
+  // Delete from store (this also deletes the icon file)
+  const success = await siteStore.delete(id);
+
   // If deleting the current site, clear the view
   if (success && currentSiteId === id) {
     destroyCurrentBrowserView();
@@ -445,6 +461,201 @@ ipcMain.handle('app:getStoragePath', () => {
   return getStoragePath();
 });
 
+/**
+ * Pin Management
+ */
+ipcMain.handle('pin:create', (_event, siteId: string) => {
+  const site = siteStore.getById(siteId);
+  if (!site) return { success: false, error: 'Site not found' };
+
+  const settings = settingsStore.getAll();
+  const window = pinManager.createPinnedWindow(site, settings.userAgentMode);
+
+  // Update site as pinned
+  siteStore.update(siteId, { pinned: true });
+
+  return { success: true, windowId: window.id };
+});
+
+ipcMain.handle('pin:close', (_event, siteId: string) => {
+  pinManager.closePinnedWindow(siteId);
+  siteStore.update(siteId, { pinned: false });
+  return { success: true };
+});
+
+ipcMain.handle('pin:toggle', (_event, siteId: string) => {
+  const site = siteStore.getById(siteId);
+  if (!site) return { success: false, error: 'Site not found' };
+
+  if (pinManager.isPinned(siteId)) {
+    pinManager.closePinnedWindow(siteId);
+    siteStore.update(siteId, { pinned: false });
+    return { success: true, pinned: false };
+  } else {
+    const settings = settingsStore.getAll();
+    pinManager.createPinnedWindow(site, settings.userAgentMode);
+    siteStore.update(siteId, { pinned: true });
+    return { success: true, pinned: true };
+  }
+});
+
+ipcMain.handle('pin:isPinned', (_event, siteId: string) => {
+  return pinManager.isPinned(siteId);
+});
+
+ipcMain.handle('pin:setAlwaysOnTop', (_event, siteId: string, alwaysOnTop: boolean) => {
+  pinManager.setAlwaysOnTop(siteId, alwaysOnTop);
+  siteStore.update(siteId, { alwaysOnTop });
+  return { success: true };
+});
+
+ipcMain.handle('pin:openDevTools', (_event, siteId: string) => {
+  pinManager.openDevToolsForPinnedWindow(siteId);
+  return { success: true };
+});
+
+/**
+ * Popover Always-on-Top
+ */
+ipcMain.handle('popover:setAlwaysOnTop', (_event, alwaysOnTop: boolean) => {
+  if (window) {
+    window.setAlwaysOnTop(alwaysOnTop);
+    settingsStore.update({ popoverAlwaysOnTop: alwaysOnTop });
+    return { success: true };
+  }
+  return { success: false };
+});
+
+ipcMain.handle('popover:isAlwaysOnTop', () => {
+  return window ? window.isAlwaysOnTop() : false;
+});
+
+/**
+ * Ad-Blocking
+ */
+ipcMain.handle('adblock:setEnabled', (_event, enabled: boolean) => {
+  sessionManager.setAdBlockEnabled(enabled);
+  settingsStore.update({ adBlockEnabled: enabled });
+  return { success: true };
+});
+
+ipcMain.handle('adblock:isEnabled', () => {
+  return sessionManager.isAdBlockEnabled();
+});
+
+/**
+ * Icon Management
+ */
+ipcMain.handle('icon:save', async (_event, siteId: string, iconData: string) => {
+  try {
+    const iconPath = await iconStore.saveIcon(siteId, iconData);
+    siteStore.update(siteId, { iconPath });
+
+    // Update tray icon if site is pinned
+    const site = siteStore.getById(siteId);
+    if (site && pinManager.isPinned(siteId)) {
+      pinManager.updateTrayIcon(site);
+    }
+
+    return { success: true, iconPath };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('icon:delete', async (_event, siteId: string) => {
+  try {
+    await iconStore.deleteIcon(siteId);
+    siteStore.update(siteId, { iconPath: undefined });
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('icon:getPath', (_event, siteId: string) => {
+  return iconStore.getIconPath(siteId);
+});
+
+/**
+ * DevTools
+ */
+ipcMain.handle('devtools:open', () => {
+  if (currentBrowserView) {
+    currentBrowserView.webContents.openDevTools();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('devtools:openPopover', () => {
+  if (window) {
+    window.webContents.openDevTools();
+  }
+  return { success: true };
+});
+
+/**
+ * Context Menu Actions
+ */
+ipcMain.handle('site:openInBrowser', (_event, siteId: string) => {
+  const site = siteStore.getById(siteId);
+  if (site) {
+    require('electron').shell.openExternal(site.url);
+    return { success: true };
+  }
+  return { success: false };
+});
+
+// ============================================================================
+// Keyboard Shortcuts
+// ============================================================================
+
+/**
+ * Register global keyboard shortcuts
+ */
+function registerKeyboardShortcuts(): void {
+  // Toggle popover window
+  globalShortcut.register('CommandOrControl+Shift+X', () => {
+    toggleWindow();
+  });
+
+  // Cycle through sites (when popover is open)
+  globalShortcut.register('CommandOrControl+Tab', () => {
+    if (window && window.isVisible()) {
+      const sites = siteStore.getAll();
+      if (sites.length === 0) return;
+
+      const currentIndex = sites.findIndex(s => s.id === currentSiteId);
+      const nextIndex = (currentIndex + 1) % sites.length;
+      switchToSite(sites[nextIndex].id);
+
+      // Notify renderer to update UI
+      if (window) {
+        window.webContents.send('site-cycled', sites[nextIndex].id);
+      }
+    }
+  });
+
+  // Open DevTools for current BrowserView
+  globalShortcut.register('CommandOrControl+Alt+I', () => {
+    if (currentBrowserView) {
+      currentBrowserView.webContents.openDevTools();
+    }
+  });
+
+  console.log('Keyboard shortcuts registered:');
+  console.log('  - CommandOrControl+Shift+X: Toggle popover');
+  console.log('  - CommandOrControl+Tab: Cycle sites');
+  console.log('  - CommandOrControl+Alt+I: Open DevTools');
+}
+
+/**
+ * Unregister all keyboard shortcuts
+ */
+function unregisterKeyboardShortcuts(): void {
+  globalShortcut.unregisterAll();
+}
+
 // ============================================================================
 // App Lifecycle
 // ============================================================================
@@ -458,14 +669,33 @@ app.whenReady().then(() => {
   createTray();
   createWindow();
 
-  // Load the last active site if available
+  // Register keyboard shortcuts
+  registerKeyboardShortcuts();
+
+  // Initialize session manager with saved settings
   const settings = settingsStore.getAll();
+  if (settings.adBlockEnabled) {
+    sessionManager.setAdBlockEnabled(true);
+  }
+
+  // Load the last active site if available
   if (settings.activeSiteId) {
     const site = siteStore.getById(settings.activeSiteId);
     if (site) {
       switchToSite(settings.activeSiteId);
     }
   }
+
+  // Restore pinned windows
+  const sites = siteStore.getAll();
+  sites.forEach(site => {
+    if (site.pinned) {
+      pinManager.createPinnedWindow(site, settings.userAgentMode);
+      if (site.alwaysOnTop) {
+        pinManager.setAlwaysOnTop(site.id, true);
+      }
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -480,6 +710,12 @@ app.on('window-all-closed', (event: Event) => {
 });
 
 app.on('before-quit', () => {
+  // Unregister keyboard shortcuts
+  unregisterKeyboardShortcuts();
+
+  // Close all pinned windows
+  pinManager.closeAllPinnedWindows();
+
   if (window) {
     window.removeAllListeners('close');
     window.close();

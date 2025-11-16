@@ -27,7 +27,9 @@ const btnUaMobile = document.getElementById('btn-ua-mobile') as HTMLButtonElemen
 
 // DOM Elements - Actions
 const btnAddSite = document.getElementById('btn-add-site') as HTMLButtonElement;
-const btnImportExport = document.getElementById('btn-import-export') as HTMLButtonElement;
+const btnSettings = document.getElementById('btn-settings') as HTMLButtonElement;
+const btnAlwaysOnTop = document.getElementById('btn-always-on-top') as HTMLButtonElement;
+const btnAdBlock = document.getElementById('btn-adblock') as HTMLButtonElement;
 
 // DOM Elements - Sites Tabs
 const sitesTabs = document.getElementById('sites-tabs') as HTMLDivElement;
@@ -53,8 +55,18 @@ const storagePath = document.getElementById('storage-path') as HTMLParagraphElem
 
 // DOM Elements - Context Menu
 const contextMenu = document.getElementById('context-menu') as HTMLDivElement;
+const ctxPin = document.getElementById('ctx-pin') as HTMLDivElement;
 const ctxEdit = document.getElementById('ctx-edit') as HTMLDivElement;
+const ctxOpenBrowser = document.getElementById('ctx-open-browser') as HTMLDivElement;
 const ctxDelete = document.getElementById('ctx-delete') as HTMLDivElement;
+
+// DOM Elements - Settings Modal
+const modalSettings = document.getElementById('modal-settings') as HTMLDivElement;
+const modalSettingsClose = document.getElementById('modal-settings-close') as HTMLButtonElement;
+const settingsPopoverAlwaysOnTop = document.getElementById('settings-popover-always-on-top') as HTMLInputElement;
+const settingsAdBlock = document.getElementById('settings-adblock') as HTMLInputElement;
+const settingsStoragePath = document.getElementById('settings-storage-path') as HTMLParagraphElement;
+const settingsBtnImportExport = document.getElementById('settings-btn-import-export') as HTMLButtonElement;
 
 // ============================================================================
 // Initialization
@@ -102,6 +114,14 @@ async function loadSettings(): Promise<void> {
       currentSiteId = settings.activeSiteId;
       updateSiteTabsActiveState();
     }
+
+    // Initialize always-on-top button state
+    const popoverAlwaysOnTop = await window.electronAPI.popover.isAlwaysOnTop();
+    updateAlwaysOnTopButton(popoverAlwaysOnTop);
+
+    // Initialize ad-block button state
+    const adBlockEnabled = await window.electronAPI.adblock.isEnabled();
+    updateAdBlockButton(adBlockEnabled);
   } catch (error) {
     console.error('Failed to load settings:', error);
   }
@@ -136,7 +156,9 @@ function setupEventListeners(): void {
 
   // Action buttons
   btnAddSite.addEventListener('click', showAddSiteModal);
-  btnImportExport.addEventListener('click', showImportExportModal);
+  btnSettings.addEventListener('click', showSettingsModal);
+  btnAlwaysOnTop.addEventListener('click', togglePopoverAlwaysOnTop);
+  btnAdBlock.addEventListener('click', toggleAdBlock);
 
   // Site modal
   modalSiteClose.addEventListener('click', hideSiteModal);
@@ -148,8 +170,19 @@ function setupEventListeners(): void {
   btnExport.addEventListener('click', handleExport);
   btnImport.addEventListener('click', handleImport);
 
+  // Settings modal
+  modalSettingsClose.addEventListener('click', hideSettingsModal);
+  settingsPopoverAlwaysOnTop.addEventListener('change', handlePopoverAlwaysOnTopChange);
+  settingsAdBlock.addEventListener('change', handleAdBlockChange);
+  settingsBtnImportExport.addEventListener('click', () => {
+    hideSettingsModal();
+    showImportExportModal();
+  });
+
   // Context menu
+  ctxPin.addEventListener('click', handleContextPin);
   ctxEdit.addEventListener('click', handleContextEdit);
+  ctxOpenBrowser.addEventListener('click', handleContextOpenBrowser);
   ctxDelete.addEventListener('click', handleContextDelete);
 
   // Close context menu on outside click
@@ -170,6 +203,18 @@ function setupEventListeners(): void {
     if (e.target === modalImportExport) {
       hideImportExportModal();
     }
+  });
+
+  modalSettings.addEventListener('click', (e) => {
+    if (e.target === modalSettings) {
+      hideSettingsModal();
+    }
+  });
+
+  // Listen for site cycle events from keyboard shortcut
+  window.electronAPI.site.onSiteCycled((siteId) => {
+    currentSiteId = siteId;
+    updateSiteTabsActiveState();
   });
 }
 
@@ -372,8 +417,13 @@ async function handleSiteFormSubmit(e: Event): Promise<void> {
 // Context Menu
 // ============================================================================
 
-function showContextMenu(x: number, y: number, siteId: string): void {
+async function showContextMenu(x: number, y: number, siteId: string): Promise<void> {
   contextMenuTargetSiteId = siteId;
+
+  // Update pin text based on current state
+  const isPinned = await window.electronAPI.pin.isPinned(siteId);
+  ctxPin.textContent = isPinned ? 'Unpin Site' : 'Pin Site';
+
   contextMenu.style.left = `${x}px`;
   contextMenu.style.top = `${y}px`;
   contextMenu.classList.remove('hidden');
@@ -417,6 +467,37 @@ async function handleContextDelete(): Promise<void> {
   } catch (error) {
     console.error('Failed to delete site:', error);
     alert('Failed to delete site. See console for details.');
+  }
+
+  hideContextMenu();
+}
+
+async function handleContextPin(): Promise<void> {
+  if (!contextMenuTargetSiteId) return;
+
+  try {
+    const result = await window.electronAPI.pin.toggle(contextMenuTargetSiteId);
+    if (result.success) {
+      await loadSites(); // Reload to show pinned state
+    } else {
+      alert(`Failed to toggle pin: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Failed to toggle pin:', error);
+    alert('Failed to toggle pin. See console for details.');
+  }
+
+  hideContextMenu();
+}
+
+async function handleContextOpenBrowser(): Promise<void> {
+  if (!contextMenuTargetSiteId) return;
+
+  try {
+    await window.electronAPI.site.openInBrowser(contextMenuTargetSiteId);
+  } catch (error) {
+    console.error('Failed to open in browser:', error);
+    alert('Failed to open site in browser. See console for details.');
   }
 
   hideContextMenu();
@@ -479,5 +560,117 @@ async function handleImport(): Promise<void> {
   } catch (error) {
     console.error('Import error:', error);
     alert('Import failed. See console for details.');
+  }
+}
+
+// ============================================================================
+// Settings Modal
+// ============================================================================
+
+async function showSettingsModal(): Promise<void> {
+  // Load current settings
+  try {
+    const popoverAlwaysOnTop = await window.electronAPI.popover.isAlwaysOnTop();
+    settingsPopoverAlwaysOnTop.checked = popoverAlwaysOnTop;
+
+    const adBlockEnabled = await window.electronAPI.adblock.isEnabled();
+    settingsAdBlock.checked = adBlockEnabled;
+
+    const storagePath = await window.electronAPI.app.getStoragePath();
+    settingsStoragePath.textContent = storagePath;
+
+    // Update button states
+    updateAlwaysOnTopButton(popoverAlwaysOnTop);
+    updateAdBlockButton(adBlockEnabled);
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+  }
+
+  modalSettings.classList.add('active');
+}
+
+function hideSettingsModal(): void {
+  modalSettings.classList.remove('active');
+}
+
+async function handlePopoverAlwaysOnTopChange(): Promise<void> {
+  try {
+    const enabled = settingsPopoverAlwaysOnTop.checked;
+    await window.electronAPI.popover.setAlwaysOnTop(enabled);
+    updateAlwaysOnTopButton(enabled);
+  } catch (error) {
+    console.error('Failed to set always on top:', error);
+    alert('Failed to update always on top setting.');
+  }
+}
+
+async function handleAdBlockChange(): Promise<void> {
+  try {
+    const enabled = settingsAdBlock.checked;
+    await window.electronAPI.adblock.setEnabled(enabled);
+    updateAdBlockButton(enabled);
+  } catch (error) {
+    console.error('Failed to set ad-block:', error);
+    alert('Failed to update ad-block setting.');
+  }
+}
+
+// ============================================================================
+// Popover Always-on-Top Toggle
+// ============================================================================
+
+async function togglePopoverAlwaysOnTop(): Promise<void> {
+  try {
+    const currentState = await window.electronAPI.popover.isAlwaysOnTop();
+    const newState = !currentState;
+
+    await window.electronAPI.popover.setAlwaysOnTop(newState);
+    updateAlwaysOnTopButton(newState);
+
+    // Update settings modal if open
+    settingsPopoverAlwaysOnTop.checked = newState;
+  } catch (error) {
+    console.error('Failed to toggle always on top:', error);
+    alert('Failed to toggle always on top.');
+  }
+}
+
+function updateAlwaysOnTopButton(enabled: boolean): void {
+  if (enabled) {
+    btnAlwaysOnTop.classList.add('active');
+    btnAlwaysOnTop.title = 'Always on Top (Enabled)';
+  } else {
+    btnAlwaysOnTop.classList.remove('active');
+    btnAlwaysOnTop.title = 'Always on Top (Disabled)';
+  }
+}
+
+// ============================================================================
+// Ad-Blocking Toggle
+// ============================================================================
+
+async function toggleAdBlock(): Promise<void> {
+  try {
+    const currentState = await window.electronAPI.adblock.isEnabled();
+    const newState = !currentState;
+
+    await window.electronAPI.adblock.setEnabled(newState);
+    updateAdBlockButton(newState);
+
+    // Update settings modal if open
+    settingsAdBlock.checked = newState;
+  } catch (error) {
+    console.error('Failed to toggle ad-block:', error);
+    alert('Failed to toggle ad-block.');
+  }
+}
+
+function updateAdBlockButton(enabled: boolean): void {
+  if (enabled) {
+    btnAdBlock.classList.add('active');
+    btnAdBlock.title = 'Ad Blocker (Enabled)';
+  } else {
+    btnAdBlock.classList.remove('active');
+    btnAdBlock.title = 'Ad Blocker (Disabled)';
   }
 }

@@ -55,15 +55,27 @@
 
     <!-- Action Buttons -->
     <div class="action-controls">
+      <button id="btn-always-on-top" class="action-btn" title="Toggle Always on Top">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3L11 6L9 6L9 11L7 11L7 6L5 6L8 3Z" fill="currentColor"/>
+          <path d="M3 13H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="btn-adblock" class="action-btn" title="Toggle Ad Blocker">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L13 4V8C13 11 8 14 8 14C8 14 3 11 3 8V4L8 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M5.5 8L7 9.5L10.5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button id="btn-add-site" class="action-btn" title="Add Site">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
-      <button id="btn-import-export" class="action-btn" title="Import/Export">
+      <button id="btn-settings" class="action-btn" title="Settings">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M8 2V10M8 2L5 5M8 2L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M3 12V13C3 13.5523 3.44772 14 4 14H12C12.5523 14 13 13.5523 13 13V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 1V3M8 13V15M15 8H13M3 8H1M12.5 3.5L11 5M5 11L3.5 12.5M12.5 12.5L11 11M5 5L3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
       </button>
     </div>
@@ -166,10 +178,79 @@
     </div>
   </div>
 
-  <!-- Site Context Menu (for edit/delete) -->
+  <!-- Site Context Menu (for edit/delete/pin/etc) -->
   <div id="context-menu" class="context-menu hidden">
+    <div class="context-menu-item" id="ctx-pin">Pin Site</div>
     <div class="context-menu-item" id="ctx-edit">Edit Site</div>
-    <div class="context-menu-item" id="ctx-delete">Delete Site</div>
+    <div class="context-menu-item" id="ctx-open-browser">Open in Browser</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item ctx-danger" id="ctx-delete">Delete Site</div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="modal-settings" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" id="modal-settings-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>Window Settings</h3>
+          <label class="checkbox-label">
+            <input type="checkbox" id="settings-popover-always-on-top" />
+            <span>Keep popover window always on top</span>
+          </label>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section">
+          <h3>Privacy & Security</h3>
+          <label class="checkbox-label">
+            <input type="checkbox" id="settings-adblock" />
+            <span>Enable ad-blocking (blocks common ad domains)</span>
+          </label>
+          <small class="settings-help">Uses a built-in filter list to block ads and trackers</small>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section">
+          <h3>Keyboard Shortcuts</h3>
+          <div class="shortcut-list">
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl/Cmd + Shift + X</span>
+              <span class="shortcut-desc">Toggle popover window</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl/Cmd + Tab</span>
+              <span class="shortcut-desc">Cycle through sites</span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-key">Ctrl/Cmd + Alt + I</span>
+              <span class="shortcut-desc">Open DevTools</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section">
+          <h3>Storage Location</h3>
+          <p id="settings-storage-path" class="storage-path">Loading...</p>
+          <small>Sites and settings are automatically saved to this location</small>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section">
+          <h3>Import / Export</h3>
+          <p>Backup or restore your sites and settings</p>
+          <button type="button" class="btn btn-secondary" id="settings-btn-import-export">Open Import/Export</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="renderer.js"></script>
