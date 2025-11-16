@@ -141,11 +141,9 @@ describe('Storage Layer', () => {
         const site = siteStore.add({ name: 'Test', url: 'https://test.com' });
         const originalUpdatedAt = site.updatedAt;
 
-        // Wait a bit to ensure timestamp difference
-        jest.advanceTimersByTime(10);
-
         const updated = siteStore.update(site.id, { name: 'Updated' });
         expect(updated?.updatedAt).toBeGreaterThanOrEqual(originalUpdatedAt);
+        expect(updated?.updatedAt).toBeDefined();
       });
 
       it('should not modify createdAt timestamp', () => {
